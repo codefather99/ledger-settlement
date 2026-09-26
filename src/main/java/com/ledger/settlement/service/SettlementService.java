@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SettlementService {
 
     private final PaymentRepository paymentRepository;
+    private final FeeScheduleProvider feeScheduleProvider;
 
     /**
      * The fee rate in basis points (one ten-thousandth), converted ONCE from the
@@ -39,9 +40,11 @@ public class SettlementService {
      */
     private final long feeRateBasisPoints;
 
-    public SettlementService(PaymentRepository paymentRepository, LedgerProperties ledgerProperties) {
+    public SettlementService(PaymentRepository paymentRepository, LedgerProperties ledgerProperties,
+                             FeeScheduleProvider feeScheduleProvider) {
         this.paymentRepository = paymentRepository;
         this.feeRateBasisPoints = toBasisPoints(ledgerProperties.getFeeRate());
+        this.feeScheduleProvider = feeScheduleProvider;
     }
 
     /**
@@ -101,7 +104,9 @@ public class SettlementService {
             throw new MerchantNotFoundException(merchantId);
         }
         long gross = payments.stream().mapToLong(PaymentEntity::getAmountMinor).sum();
-        long fee = gross * feeRateBasisPoints / 10_000;
+        Long overrideBasisPoints = feeScheduleProvider.overrideBasisPointsFor(merchantId);
+        long basisPoints = overrideBasisPoints != null ? overrideBasisPoints : feeRateBasisPoints;
+        long fee = gross * basisPoints / 10_000;
         return gross - fee;
     }
 }
