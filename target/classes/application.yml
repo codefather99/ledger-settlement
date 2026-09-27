@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ledger-settlement
+  threads:
+    virtual:
+      # Migrates the embedded Tomcat request executor from the platform-thread
+      # pool (minSpareThreads=10, maxThreads=200, acceptCount=100 - see
+      # docs/threads.md for the baseline captured against that pool) to one
+      # virtual thread per request.
+      enabled: true
+  jpa:
+    hibernate:
+      # Flyway owns the schema. Hibernate must never invent or alter tables from the
+      # entity mapping - "validate" fails startup loudly if PaymentEntity and the
+      # payments table ever drift apart, instead of Hibernate quietly patching one to
+      # match the other.
+      ddl-auto: update
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+# Application-specific configuration, not a Spring Boot key. Kept out of code so the
+# fee can change without a rebuild, and read through a type-safe @ConfigurationProperties
+# bean rather than @Value, so a missing or malformed value fails at startup.
+ledger:
+  fee-rate: 0.031
