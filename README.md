@@ -81,3 +81,136 @@ export SPRING_DATASOURCE_PASSWORD=ledger
 mvn spring-boot:run
 ```
 
+
+## JMH Benchmarks
+
+The repository contains a standalone Maven benchmark module under `benchmarks/`.
+
+The benchmark module uses JMH 1.37 and benchmarks real methods from the Ledger settlement service:
+
+* `PaymentResponse.from(PaymentEntity)`
+* `PaymentEntity.toString()`
+* `SettlementService.calculateSettlement(List<PaymentEntity>)`
+
+The benchmark JAR is built separately from the Spring Boot application so that the application continues to produce its normal executable JAR.
+
+### Run the benchmarks
+
+From the repository root, run the single command:
+
+```powershell
+.\run-benchmarks.ps1
+```
+
+The script performs the complete benchmark workflow:
+
+1. Builds and installs the Ledger settlement service.
+2. Builds the `benchmarks` Maven module.
+3. Runs the `LedgerBenchmarks` JMH suite.
+4. Enables the JMH GC profiler.
+5. Writes the machine-readable results to:
+
+```text
+benchmarks/results.json
+```
+
+The equivalent benchmark invocation performed by the script is:
+
+```powershell
+java -jar target\benchmarks.jar LedgerBenchmarks -prof gc -rf json -rff results.json
+```
+
+### Benchmark configuration
+
+`LedgerBenchmarks` uses:
+
+* Java 25
+* JMH 1.37
+* 3 forks
+* 5 warmup iterations per fork
+* 10 measurement iterations per fork
+* 1 second per warmup iteration
+* 1 second per measurement iteration
+* Average-time mode
+* Microseconds as the output unit
+* JMH GC profiler
+
+The benchmark uses fixed, seeded inputs where appropriate so that benchmark setup is repeatable.
+
+### Benchmark module
+
+The benchmark module is located at:
+
+```text
+benchmarks/
+├── pom.xml
+└── src/
+    └── main/
+        └── java/
+```
+
+It is intentionally a standalone Maven project rather than a Maven child inheriting from the Spring Boot application POM.
+
+The benchmark module depends on the normal, non-executable `ledger-settlement` JAR:
+
+```xml
+<dependency>
+    <groupId>com.ledger</groupId>
+    <artifactId>ledger-settlement</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+</dependency>
+```
+
+The Spring Boot Maven plugin uses the `exec` classifier for the executable application JAR. This keeps the normal application artifact available for the benchmark module.
+
+### Benchmark results
+
+The final benchmark output is stored in:
+
+```text
+benchmarks/results.json
+```
+
+Additional benchmark evidence is stored in the `benchmarks/` directory, including:
+
+```text
+benchmarks/
+├── results.json
+├── run-final.txt
+├── results-timing.json
+├── run-timing.txt
+├── state-smoke-run.txt
+├── broken-run.txt
+└── fixed-run.txt
+```
+
+`results.json` contains the full-precision output from the final benchmark run.
+
+### Dead-code elimination demonstration
+
+The benchmark suite also contains `BrokenBenchmark` and `FixedBenchmark` to demonstrate why benchmark results must consume the result of the operation being measured.
+
+The intentionally broken version discards the result:
+
+```java
+@Benchmark
+public void mapToResponse_discardsResult() {
+    PaymentResponse.from(ENTITY);
+}
+```
+
+The fixed versions either return the result or consume it using JMH's `Blackhole`.
+
+The broken benchmark produces an unrealistically small result because the JIT compiler can eliminate work whose result is never observed.
+
+These demonstration benchmarks are not included in the normal benchmark command. The one-command workflow runs only:
+
+```text
+LedgerBenchmarks
+```
+
+so the normal benchmark run remains focused and does not execute the demonstration suite.
+
+```
+```
+
