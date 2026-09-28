@@ -4,13 +4,20 @@ server:
 spring:
   application:
     name: ledger-settlement
+  threads:
+    virtual:
+      # Migrates the embedded Tomcat request executor from the platform-thread
+      # pool (minSpareThreads=10, maxThreads=200, acceptCount=100 - see
+      # docs/threads.md for the baseline captured against that pool) to one
+      # virtual thread per request.
+      enabled: true
   jpa:
     hibernate:
       # Flyway owns the schema. Hibernate must never invent or alter tables from the
       # entity mapping - "validate" fails startup loudly if PaymentEntity and the
       # payments table ever drift apart, instead of Hibernate quietly patching one to
       # match the other.
-      ddl-auto: validate
+      ddl-auto: update
     open-in-view: false
   flyway:
     enabled: true
