@@ -9,9 +9,10 @@ import com.ledger.settlement.web.SettlementResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
-import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.resttestclient.TestRestTemplate;
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -26,6 +27,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * restart on 4 March 2026 lost an evening of MR-4471's records.
  */
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestRestTemplate
 @Testcontainers
 class PaymentControllerIT {
 
@@ -106,7 +108,7 @@ class PaymentControllerIT {
     @Test
     @DisplayName("GET /payments/{id} round-trips the payment just recorded, as the DTO not the entity")
     void getPaymentByIdRoundTrips() {
-        RecordPaymentRequest request = new RecordPaymentRequest("MR-4471", 60_150L, "GBP");
+        RecordPaymentRequest request = new RecordPaymentRequest("MR-ROUNDTRIP", 60_150L, "GBP");
         ResponseEntity<PaymentResponse> created =
                 restTemplate.postForEntity("/payments", request, PaymentResponse.class);
         String id = created.getBody().id();
