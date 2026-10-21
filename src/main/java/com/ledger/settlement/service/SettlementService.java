@@ -5,6 +5,7 @@ import com.ledger.settlement.domain.PaymentEntity;
 import com.ledger.settlement.error.MerchantNotFoundException;
 import com.ledger.settlement.error.PaymentNotFoundException;
 import com.ledger.settlement.repository.PaymentRepository;
+import com.ledger.settlement.fees.FeeSchedule;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -101,7 +102,9 @@ public class SettlementService {
             throw new MerchantNotFoundException(merchantId);
         }
         long gross = payments.stream().mapToLong(PaymentEntity::getAmountMinor).sum();
-        long fee = gross * feeRateBasisPoints / 10_000;
+
+        long basisPoints = FeeSchedule.overrideBasisPoints(merchantId).orElse(feeRateBasisPoints);
+        long fee = gross * basisPoints / 10_000;
         return gross - fee;
     }
 }
