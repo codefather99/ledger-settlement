@@ -2,27 +2,34 @@ package com.ledger.settlement.fees;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /**
  * Per-merchant fee overrides in basis points.
  *
- * DEFECT (planted for lab SJV-L1): the table is fetched from the downstream service inside
- * the class initializer. The first request that touches this class blocks in the static
- * block while the downstream call runs, and any other request that arrives meanwhile waits
- * for that initialization to finish.
+ * FIX (lab SJV-L1): the table is loaded once, in the constructor, when Spring creates this
+ * bean on the main platform thread during startup, before the web server accepts traffic.
+ * The map is immutable and published through a final field, so request threads only read it.
+ * Result semantics are identical to the class-initializer version.
  */
+@Component
 public final class FeeSchedule {
 
-    private static final Map<String, Long> OVERRIDES;
+    private final Map<String, Long> overrides;
 
-    static {
-        OVERRIDES = FeeScheduleClient.fetchOverrides();
+    @Autowired
+    public FeeSchedule() {
+        this(FeeScheduleClient::fetchOverrides);
     }
 
-    private FeeSchedule() {
+    FeeSchedule(Supplier<Map<String, Long>> loader) {
+        this.overrides = Map.copyOf(loader.get());
     }
 
-    public static Optional<Long> overrideBasisPoints(String merchantId) {
-        return Optional.ofNullable(OVERRIDES.get(merchantId));
+    public Optional<Long> overrideBasisPoints(String merchantId) {
+        return Optional.ofNullable(overrides.get(merchantId));
     }
 }
