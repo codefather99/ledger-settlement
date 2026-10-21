@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: ledger-settlement
+  threads:
+    virtual:
+      enabled: true
   jpa:
     hibernate:
       # Flyway owns the schema. Hibernate must never invent or alter tables from the
