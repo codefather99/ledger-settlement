@@ -5,6 +5,7 @@ import com.ledger.settlement.domain.PaymentEntity;
 import com.ledger.settlement.error.MerchantNotFoundException;
 import com.ledger.settlement.error.PaymentNotFoundException;
 import com.ledger.settlement.repository.PaymentRepository;
+import com.ledger.settlement.fees.FeeSchedule;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SettlementService {
 
     private final PaymentRepository paymentRepository;
+    private final FeeSchedule feeSchedule;
 
     /**
      * The fee rate in basis points (one ten-thousandth), converted ONCE from the
@@ -39,11 +41,12 @@ public class SettlementService {
      */
     private final long feeRateBasisPoints;
 
-    public SettlementService(PaymentRepository paymentRepository, LedgerProperties ledgerProperties) {
+    public SettlementService(PaymentRepository paymentRepository, LedgerProperties ledgerProperties,
+                             FeeSchedule feeSchedule) {
         this.paymentRepository = paymentRepository;
+        this.feeSchedule = feeSchedule;
         this.feeRateBasisPoints = toBasisPoints(ledgerProperties.getFeeRate());
     }
-
     /**
      * Converts a decimal fee rate (e.g. 0.031) to an exact integer count of basis
      * points (310). Uses BigDecimal.multiply and scale checking rather than a double
@@ -101,7 +104,9 @@ public class SettlementService {
             throw new MerchantNotFoundException(merchantId);
         }
         long gross = payments.stream().mapToLong(PaymentEntity::getAmountMinor).sum();
-        long fee = gross * feeRateBasisPoints / 10_000;
+
+        long basisPoints = feeSchedule.overrideBasisPoints(merchantId).orElse(feeRateBasisPoints);
+        long fee = gross * basisPoints / 10_000;
         return gross - fee;
     }
 }
