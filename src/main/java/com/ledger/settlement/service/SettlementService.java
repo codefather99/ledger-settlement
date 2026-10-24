@@ -100,6 +100,15 @@ public class SettlementService {
         if (payments.isEmpty()) {
             throw new MerchantNotFoundException(merchantId);
         }
+        return calculateSettlement(payments);
+    }
+
+    /**
+     * The net amount owed to a merchant, in minor units, after the configured fee.
+     * Pulled out of settlementFor() so the pure calculation can be measured in isolation
+     * (see the benchmarks module) without a database round trip standing in the way.
+     */
+    public long calculateSettlement(List<PaymentEntity> payments) {
         long gross = payments.stream().mapToLong(PaymentEntity::getAmountMinor).sum();
         long fee = gross * feeRateBasisPoints / 10_000;
         return gross - fee;
