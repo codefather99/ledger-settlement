@@ -81,3 +81,13 @@ export SPRING_DATASOURCE_PASSWORD=ledger
 mvn spring-boot:run
 ```
 
+
+## Benchmarks
+
+One command, from the repository root (JDK 25, Maven, Docker running):
+
+    powershell -ExecutionPolicy Bypass -File run-benchmarks.ps1
+
+It builds and tests the service, builds the JMH module in `benchmarks/` (a shaded `benchmarks.jar`), and runs `LedgerBenchmarks` with `-prof gc`. Results go to `benchmarks/results-latest.json`. `benchmarks/results.json` is the committed evidence behind `docs/benchmarks.md`.
+
+A full run takes about 3 minutes, measured with the service's 8 integration tests included.
