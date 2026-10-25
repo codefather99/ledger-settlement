@@ -2,3 +2,9 @@ target/
 .idea/
 *.iml
 dependency-reduced-pom.xml
+
+benchmarks/results-latest.json
+benchmarks/run-script-output.txt
+*.jfr
+*.zip
+perf/
